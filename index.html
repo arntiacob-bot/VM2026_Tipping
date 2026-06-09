@@ -185,8 +185,22 @@
     <div class="section-title">Dine opplysninger</div>
     <div class="form-row">
       <div class="form-group"><label>Navn</label><input id="name" placeholder="Ditt navn"></div>
-      <div class="form-group"><label>Toppscorer VM</label><input id="topScorer" placeholder="Spiller"></div>
-      <div class="form-group"><label>Flest gule kort</label><input id="mostCards" placeholder="Spiller"></div>
+      <div class="form-group">
+        <label>Din gruppe</label>
+        <select id="userGroup" onchange="saveLocal()">
+          <option value="">– velg gruppe –</option>
+          <option value="Gruppe1">Greåker VGS</option>
+          <option value="Gruppe2">Venner og familie</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Toppscorer VM – spiller</label><input id="topScorer" placeholder="Spillernavn"></div>
+      <div class="form-group"><label>Toppscorer VM – land</label><input id="topScorerCountry" placeholder="Land"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Flest gule kort – spiller</label><input id="mostCards" placeholder="Spillernavn"></div>
+      <div class="form-group"><label>Flest gule kort – land</label><input id="mostCardsCountry" placeholder="Land"></div>
     </div>
 
     <div class="points-legend">
@@ -229,6 +243,10 @@
 
   <!-- ===== TAB: LEADERBOARD ===== -->
   <div id="tab-leaderboard" class="tab-content">
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+      <button id="lb-btn-1" class="btn btn-gold" style="font-size:0.85rem;padding:8px 18px;" onclick="switchLbGroup('Gruppe1')">Greåker VGS</button>
+      <button id="lb-btn-2" class="btn btn-green" style="font-size:0.85rem;padding:8px 18px;opacity:0.6;" onclick="switchLbGroup('Gruppe2')">Venner og familie</button>
+    </div>
     <div class="refresh-bar"><span class="refresh-dot"></span><span id="lb-status">Laster...</span></div>
     <table class="leaderboard-table">
       <thead><tr><th></th><th>Navn</th><th>Poeng</th><th></th></tr></thead>
@@ -281,8 +299,33 @@
       <div class="admin-section">
         <div class="section-title">Fasit – Ekstra</div>
         <div class="form-row">
-          <div class="form-group"><label>Toppscorer</label><input id="adminTopScorer" placeholder="Spiller"></div>
-          <div class="form-group"><label>Flest gule kort</label><input id="adminMostCards" placeholder="Spiller"></div>
+          <div class="form-group"><label>Toppscorer – spiller</label><input id="adminTopScorer" placeholder="Spillernavn"></div>
+          <div class="form-group"><label>Toppscorer – land</label><input id="adminTopScorerCountry" placeholder="Land"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Flest gule kort – spiller</label><input id="adminMostCards" placeholder="Spillernavn"></div>
+          <div class="form-group"><label>Flest gule kort – land</label><input id="adminMostCardsCountry" placeholder="Land"></div>
+        </div>
+      </div>
+
+      <!-- Admin: flytt spiller mellom grupper -->
+      <div class="admin-section">
+        <div class="section-title">Flytt spiller mellom grupper</div>
+        <p style="font-size:0.82rem;color:rgba(255,255,255,0.4);margin-bottom:10px;">
+          For spillere som sendte inn uten å velge gruppe, eller som skal bytte gruppe.
+        </p>
+        <div class="form-row">
+          <div class="form-group"><label>Spillernavn</label><input id="adminMoveName" placeholder="Eksakt navn"></div>
+          <div class="form-group">
+            <label>Flytt til gruppe</label>
+            <select id="adminMoveTarget" style="background:var(--card);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:var(--light);padding:10px 14px;width:100%;font-family:Barlow,sans-serif;">
+              <option value="Gruppe1">Greåker VGS (Sheet1)</option>
+              <option value="Gruppe2">Venner og familie (Sheet2)</option>
+            </select>
+          </div>
+          <div class="form-group" style="display:flex;align-items:flex-end;">
+            <button class="btn btn-green" style="font-size:0.9rem;" onclick="adminMovePlayer()">Flytt</button>
+          </div>
         </div>
       </div>
 
@@ -365,9 +408,12 @@ let fasitTables    = {}; // { "A": ["Mexico","Sør-Korea","Sør-Afrika","Tsjekki
 // =============================================
 function saveLocal(toast = false) {
   const data = {
-    name:      document.getElementById("name").value,
-    topScorer: document.getElementById("topScorer").value,
-    mostCards: document.getElementById("mostCards").value,
+    name:               document.getElementById("name").value,
+    userGroup:          document.getElementById("userGroup").value,
+    topScorer:          document.getElementById("topScorer").value,
+    topScorerCountry:   document.getElementById("topScorerCountry").value,
+    mostCards:          document.getElementById("mostCards").value,
+    mostCardsCountry:   document.getElementById("mostCardsCountry").value,
     scores, knockout
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -379,12 +425,14 @@ function loadLocal() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (!saved) return;
     const d = JSON.parse(saved);
-    if (d.name)      document.getElementById("name").value      = d.name;
-    if (d.topScorer) document.getElementById("topScorer").value = d.topScorer;
-    if (d.mostCards) document.getElementById("mostCards").value = d.mostCards;
-    if (d.scores)   scores   = d.scores;
-    // support both old string-keyed and new array-based knockout
+    if (d.name)               document.getElementById("name").value             = d.name;
+    if (d.userGroup)          document.getElementById("userGroup").value         = d.userGroup;
+    if (d.topScorer)          document.getElementById("topScorer").value         = d.topScorer;
+    if (d.topScorerCountry)   document.getElementById("topScorerCountry").value  = d.topScorerCountry;
+    if (d.mostCards)          document.getElementById("mostCards").value         = d.mostCards;
+    if (d.mostCardsCountry)   document.getElementById("mostCardsCountry").value  = d.mostCardsCountry;
     if (d.knockout && typeof d.knockout === "object") knockout = d.knockout;
+    if (d.scores)             scores = d.scores;
   } catch(e) {}
 }
 
@@ -585,10 +633,16 @@ async function sendData() {
   }
   const name = document.getElementById("name").value.trim();
   if (!name) { showToast("⚠️ Skriv inn navnet ditt!"); return; }
+  const userGroup = document.getElementById("userGroup").value;
+  if (!userGroup) { showToast("⚠️ Velg gruppe/gjeng øverst!"); return; }
+
   const payload = {
     name,
-    topScorer: document.getElementById("topScorer").value,
-    mostCards: document.getElementById("mostCards").value,
+    userGroup,
+    topScorer:          document.getElementById("topScorer").value,
+    topScorerCountry:   document.getElementById("topScorerCountry").value,
+    mostCards:          document.getElementById("mostCards").value,
+    mostCardsCountry:   document.getElementById("mostCardsCountry").value,
     scores, knockout
   };
   try {
@@ -604,10 +658,25 @@ async function sendData() {
 // =============================================
 // LEADERBOARD
 // =============================================
+let currentLbGroup = "Gruppe1";
+
+function switchLbGroup(g) {
+  currentLbGroup = g;
+  document.getElementById("lb-btn-1").style.opacity = g === "Gruppe1" ? "1" : "0.6";
+  document.getElementById("lb-btn-2").style.opacity = g === "Gruppe2" ? "1" : "0.6";
+  document.getElementById("lb-btn-1").className = g === "Gruppe1" ? "btn btn-gold" : "btn btn-green";
+  document.getElementById("lb-btn-2").className = g === "Gruppe2" ? "btn btn-gold" : "btn btn-green";
+  document.getElementById("lb-btn-1").style.fontSize = "0.85rem";
+  document.getElementById("lb-btn-2").style.fontSize = "0.85rem";
+  document.getElementById("lb-btn-1").style.padding = "8px 18px";
+  document.getElementById("lb-btn-2").style.padding = "8px 18px";
+  loadLeaderboard();
+}
+
 async function loadLeaderboard() {
   document.getElementById("lb-status").textContent = "Henter...";
   try {
-    const res = await fetch(SUBMIT_URL + "?action=leaderboard", { mode: "cors" });
+    const res = await fetch(SUBMIT_URL + "?action=leaderboard&group=" + encodeURIComponent(currentLbGroup), { mode: "cors" });
     if (!res.ok) throw new Error("HTTP " + res.status);
     const data = await res.json();
     const tbody = document.getElementById("leaderboard-body");
@@ -698,6 +767,19 @@ async function loadBreakdown(name) {
 // =============================================
 // ADMIN
 // =============================================
+async function adminMovePlayer() {
+  const name   = document.getElementById("adminMoveName").value.trim();
+  const target = document.getElementById("adminMoveTarget").value;
+  if (!name) { showToast("⚠️ Skriv inn spillernavn"); return; }
+  try {
+    await postToScript({ admin: true, action: "movePlayer", moveName: name, moveTarget: target });
+    showToast("✅ " + name + " flyttes til " + target);
+    document.getElementById("adminMoveName").value = "";
+  } catch(e) {
+    showToast("❌ Feil ved flytting");
+  }
+}
+
 function login() {
   if (document.getElementById("adminPass").value === ADMIN_PASSWORD) {
     document.getElementById("adminPanel").style.display = "block";
@@ -712,8 +794,10 @@ async function loadFasit() {
     fasitMatches  = data.matches   || {};
     fasitKnockout = data.knockout  || {};
     fasitTables   = data.tables    || {};
-    document.getElementById("adminTopScorer").value = data.topScorer || "";
-    document.getElementById("adminMostCards").value = data.mostCards || "";
+    document.getElementById("adminTopScorer").value         = data.topScorer        || "";
+    document.getElementById("adminTopScorerCountry").value  = data.topScorerCountry || "";
+    document.getElementById("adminMostCards").value         = data.mostCards        || "";
+    document.getElementById("adminMostCardsCountry").value  = data.mostCardsCountry || "";
   } catch(e) { console.warn("Fasit ikke lastet:", e); }
   renderAdminMatches();
   renderAdminTables();
@@ -847,11 +931,13 @@ function renderAdminKnockout() {
 async function sendFasit() {
   const payload = {
     admin: true,
-    matches:   fasitMatches,
-    tables:    fasitTables,
-    knockout:  fasitKnockout,
-    topScorer: document.getElementById("adminTopScorer").value,
-    mostCards: document.getElementById("adminMostCards").value
+    matches:            fasitMatches,
+    tables:             fasitTables,
+    knockout:           fasitKnockout,
+    topScorer:          document.getElementById("adminTopScorer").value,
+    topScorerCountry:   document.getElementById("adminTopScorerCountry").value,
+    mostCards:          document.getElementById("adminMostCards").value,
+    mostCardsCountry:   document.getElementById("adminMostCardsCountry").value
   };
   try {
     await postToScript(payload);
